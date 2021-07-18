@@ -1,0 +1,62 @@
+#############################################################################
+# Default syslog-ng.conf file which collects all local logs into a
+# single file called /var/log/messages tailored to container usage.
+#
+# The changes from the stock, default syslog-ng.conf file is that we've
+# dropped the system() source that is not needed and that we enabled network
+# connections using default-network-drivers(). Customize as needed and
+# override using the -v option to docker, such as:
+#
+#  docker run ...  -v "$PWD/syslog-ng.conf":/etc/syslog-ng/syslog-ng.conf
+#
+
+@version: 3.29
+@include "scl.conf"
+
+options {
+  long_hostnames(on);
+  flush_lines(0);
+  use_dns(persist_only);
+  use_fqdn(yes);
+  owner("{{ container_user }}");
+  group("{{ container_group }}");
+  perm(0640);
+	dir-perm(0750);
+  stats_freq(0);
+  bad_hostname("^gconfd$");
+  normalize_hostnames(yes);
+  keep_hostname(yes);
+};
+
+source s_local {
+	internal();
+};
+
+source s_network {
+	default-network-drivers(
+		# NOTE: TLS support
+		#
+		# the default-network-drivers() source driver opens the TLS
+		# enabled ports as well, however without an actual key/cert
+		# pair they will not operate and syslog-ng would display a
+		# warning at startup.
+		#
+		#tls(key-file("/path/to/ssl-private-key") cert-file("/path/to/ssl-cert"))
+	);
+	udp(port(1514));
+	tcp(port(1514));
+};
+
+destination d_local {
+	file(
+	   "/var/log/messages-${YEAR}_${MONTH}_${DAY}.log"
+		 create-dirs(yes)
+	);
+	file("/var/log/${HOST}/${YEAR}_${MONTH}_${DAY}-kv.log" create-dirs(yes) template("$ISODATE $HOST $(format-welf --scope all-nv-pairs)\n") frac-digits(3));
+};
+
+log {
+	source(s_local);
+	source(s_network);
+	destination(d_local);
+};

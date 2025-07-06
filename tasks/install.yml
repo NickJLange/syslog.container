@@ -35,6 +35,14 @@
     owner: "{{container_user}}"
     group: "{{container_group}}"
 
+- name: create the disk buffer directory
+  file:
+    path: "{{ container_prefix }}/disk-buffer"
+    state: directory
+    mode: 0755
+    owner: "{{container_user}}"
+    group: "{{container_group}}"
+
 - name: Add envfile for {{service_name}}
   template:
     src: container.envfile.j2

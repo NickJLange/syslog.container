@@ -18,7 +18,9 @@
   shell: "{{podman_path}} run -d --replace=true --name={{ service_name }} --env-file={{ container_env_file }} \
     -p 1514:1514/udp -p 1514:1514/tcp -p 1601:1601 \
     -v {{ container_conf_dir }}/syslog-ng.conf:/etc/syslog-ng/syslog-ng.conf \
-    -v {{ container_prefix }}/data:/var/log/ {{ image_name }}"
+    -v {{ container_prefix }}/data:/var/log/ \
+    -v {{ container_prefix }}/disk-buffer:/var/log/syslog-ng-disk-buffer \
+    {{ image_name }}"
   args:
     executable: /bin/bash
   register: container_run

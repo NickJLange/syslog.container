@@ -10,19 +10,17 @@
 #  docker run ...  -v "$PWD/syslog-ng.conf":/etc/syslog-ng/syslog-ng.conf
 #
 
-@version: 3.29
+@version: "4.8"
 @include "scl.conf"
 
 options {
-  long_hostnames(on);
+  chain_hostnames(on);
   flush_lines(0);
   use_dns(persist_only);
   use_fqdn(yes);
-  owner("{{ container_user }}");
-  group("{{ container_group }}");
   perm(0640);
 	dir-perm(0750);
-  stats_freq(0);
+  stats(freq(0));
   bad_hostname("^gconfd$");
   normalize_hostnames(yes);
   keep_hostname(yes);
@@ -42,21 +40,38 @@ source s_network {
 		# warning at startup.
 		#
 		#tls(key-file("/path/to/ssl-private-key") cert-file("/path/to/ssl-cert"))
+                tcp-port(1514)
+                udp-port(1514)
+                keep_hostname(yes)
 	);
-	udp(port(1514));
-	tcp(port(1514));
 };
 
-destination d_local {
-	file(
-	   "/var/log/messages-${YEAR}_${MONTH}_${DAY}.log"
-		 create-dirs(yes)
+destination d_datadog {
+	http(
+		url("https://http-intake.logs.datadoghq.com/api/v2/logs?ddsource=syslog&ddtags=env:{{ datadog_env | default('home') }},region:{{ datadog_region | default('unknown') }}")
+		method("POST")
+		headers("Content-Type: application/json", "Accept: application/json", "DD-API-KEY: {{ my_datadog_api_key }}")
+		body("$(format-json --scope rfc5424 --scope nv-pairs --key DDMESSAGE --rekey DDMESSAGE.message)")
+		disk-buffer(
+			mem-buf-size(163840)
+			disk-buf-size(256MB)
+			reliable(yes)
+			dir("/var/log/syslog-ng-disk-buffer")
+		)
 	);
-	file("/var/log/${HOST}/${YEAR}_${MONTH}_${DAY}-kv.log" create-dirs(yes) template("$ISODATE $HOST $(format-welf --scope all-nv-pairs)\n") frac-digits(3));
+};
+
+destination d_fallback_local {
+	file("/var/log/failed-datadog/${HOST}/${YEAR}_${MONTH}_${DAY}-fallback.log" 
+		create-dirs(yes) 
+		template("$ISODATE $HOST $PROGRAM: $MESSAGE\n")
+	);
 };
 
 log {
 	source(s_local);
 	source(s_network);
-	destination(d_local);
+	destination(d_datadog);
+	destination(d_fallback_local);
+	flags(fallback);
 };

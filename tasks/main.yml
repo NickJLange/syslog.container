@@ -1,25 +1,15 @@
 ---
-- set_fact:
-    podman_path: "/usr/bin/podman"
+- name: "Find podman executable"
+  command: which podman
+  register: podman_executable
+  changed_when: false
+  failed_when: podman_executable.rc != 0
 
-- name: Check for podman in /usr/bin
-  stat:
-    path: "{{ podman_path }}"
-  register: podman_ok
+- name: "Set podman_path fact"
+  set_fact:
+    podman_path: "{{ podman_executable.stdout }}"
 
-- block:
-    - name: Check for Podman in alternate location
-      stat:
-        path: "{{ podman_local_path }}"
-      register: podman_local_ok
-    - set_fact:
-        podman_path: "{{ podman_local_path }}"
-    - fail:
-        msg: "Podman not installed - do that first"
-      when: podman_local_ok.stat.exists  != true
-  when: podman_ok.stat.exists  != true
-
-- name: "Check critical variables are defined."
+- name: "Check that critical variables are defined"
   assert:
     that:
       - container_user is defined
@@ -28,6 +18,10 @@
       - image_name is defined
       - service_name is defined
       - container_home_url is defined
+      - container_conf_dir is defined
+      - container_env_file is defined
+      - systemd_dir is defined
+    msg: "One or more required variables are not defined."
 
 - import_tasks: add_user.yml
   tags: [container_add_user]

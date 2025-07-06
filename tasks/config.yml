@@ -1,0 +1,12 @@
+---
+###############################################################################
+################################# CONFIG ####################################
+###############################################################################
+
+- name: Add syslog-ng configuration
+  template:
+    src: config.conf.j2
+    dest: "{{container_conf_dir}}/syslog-ng.conf"
+    mode: 0600
+    owner: "{{container_user}}"
+    group: "{{container_group}}"

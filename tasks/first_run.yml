@@ -1,0 +1,42 @@
+---
+###############################################################################
+################################# FIRST RUN ##################################
+###############################################################################
+
+- name: Pull latest container image
+  shell: "{{podman_path}} pull {{ image_name }}"
+  args:
+    executable: /bin/bash
+  register: pull_ok
+  become_user: "{{container_user}}"
+  become: true
+
+- debug:
+   msg: "{{pull_ok}}"
+
+- name: First run of syslog container
+  shell: "{{podman_path}} run -d --replace=true --name={{ service_name }} --env-file={{ container_env_file }} \
+    -p 1514:1514/udp -p 1514:1514/tcp -p 1601:1601 \
+    -v {{ container_conf_dir }}/syslog-ng.conf:/etc/syslog-ng/syslog-ng.conf \
+    -v {{ container_prefix }}/data:/var/log/ {{ image_name }}"
+  args:
+    executable: /bin/bash
+  register: container_run
+  become_user: "{{ container_user }}"
+  become: true
+
+- name: configure container for systemd
+  template:
+    src: container.service.j2
+    dest: "{{ systemd_dir }}/{{service_name}}.service"
+    mode: 0600
+    owner: "{{container_user}}"
+    group: "{{container_group}}"
+  notify: reload systemd
+
+- name: enable container service
+  service:
+    name: "{{ service_name }}"
+    enabled: yes
+    state: started
+  become: yes

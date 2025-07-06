@@ -10,6 +10,7 @@ container_conf_dir: "{{ container_prefix }}/etc/"
 container_system_conf_dir: "{{ container_system_prefix }}/etc/"
 container_env_file: "{{ container_prefix }}/envfile.conf"
 podman_path: "/usr/local/bin/podman"
+podman_local_path: "/usr/local/bin/podman"
 systemd_dir: "/etc/systemd/system"
 
 image_name: "nickjlange/syslog-ng:latest"

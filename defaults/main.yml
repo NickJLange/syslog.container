@@ -13,7 +13,7 @@ podman_path: "/usr/local/bin/podman"
 podman_local_path: "/usr/local/bin/podman"
 systemd_dir: "/etc/systemd/system"
 
-image_name: "nickjlange/syslog-ng:latest"
+image_name: "docker.io/balabit/syslog-ng:latest"
 service_name: "syslog-collector"
 container_home_url: https://www.syslog-ng.com/products/open-source-log-management/
 #podman run --name=container  --env-file=envfile -v {{container_conf_dir}}/:/etc/container/:z -v {{container_system_dnsmasq}}:/etc/dnsmasq.d/:z --network=host container/container:latest

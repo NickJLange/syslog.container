@@ -1,0 +1,21 @@
+[Unit]
+Description=Syslog-NG Container
+After=network-online.target
+
+[Container]
+Image={{ image_name }}
+ContainerName={{ container_friendly_name }}
+EnvironmentFile={{ container_env_file }}
+PublishPort=1514:1514/udp
+PublishPort=1514:1514/tcp
+PublishPort=1601:1601
+Volume={{ container_conf_dir }}syslog-ng.conf:/etc/syslog-ng/syslog-ng.conf:Z
+Volume={{ container_prefix }}/data:/var/log/:Z
+Volume={{ container_prefix }}/disk-buffer:/var/log/syslog-ng-disk-buffer:Z
+AutoUpdate=registry
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target

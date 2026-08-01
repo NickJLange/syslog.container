@@ -1,30 +1,13 @@
 ---
-- name: "Find podman executable"
-  command: which podman
-  register: podman_executable
-  changed_when: false
-  failed_when: podman_executable.rc != 0
-
-- name: "Set podman_path fact"
-  set_fact:
-    podman_path: "{{ podman_executable.stdout }}"
-
-- name: "Check that critical variables are defined"
+- name: "Check critical variables are defined."
   assert:
     that:
       - container_user is defined
       - container_group is defined
+      - container_friendly_name is defined
       - container_prefix is defined
       - image_name is defined
-      - service_name is defined
       - container_home_url is defined
-      - container_conf_dir is defined
-      - container_env_file is defined
-      - systemd_dir is defined
-    msg: "One or more required variables are not defined."
-
-- import_tasks: add_user.yml
-  tags: [container_add_user]
 
 - import_tasks: install.yml
   tags: [service_install_binary]
@@ -32,5 +15,11 @@
 - import_tasks: config.yml
   tags: [service_install_config]
 
-- import_tasks: first_run.yml
+- name: Deploy Syslog-NG Quadlet container file
+  template:
+    src: syslog.container.j2
+    dest: "{{ quadlet_path }}/{{ container_friendly_name }}.container"
+    mode: 0644
+    owner: "{{ container_user }}"
+    group: "{{ container_group }}"
   tags: [service_install_binary]

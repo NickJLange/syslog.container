@@ -1,11 +1,11 @@
 ---
-# The pre-Quadlet role ran syslog-collector as a system unit
-# (/etc/systemd/system/syslog-collector.service, User=container_user) around a
-# `podman run` container of the same name. Left in place it keeps ports
-# 1514/1601 and the container name, so the Quadlet unit cannot start.
-- name: Check for the legacy system unit syslog-collector.service
+# The pre-Quadlet role ran a system unit /etc/systemd/system/<service_name>.service
+# (User=container_user) around a `podman run` container named service_name.
+# Left in place it keeps ports 1514/1601 and the container name, so the Quadlet
+# unit cannot start. podman_path comes from ansible-podman-systemd-generic pre.
+- name: Check for the legacy system unit {{ service_name }}.service
   stat:
-    path: /etc/systemd/system/{{ container_friendly_name }}.service
+    path: /etc/systemd/system/{{ service_name }}.service
   register: syslog_legacy_system_unit
   become: yes
   become_user: root
@@ -13,7 +13,7 @@
 - block:
   - name: Stop and disable the legacy system unit
     systemd:
-      name: "{{ container_friendly_name }}.service"
+      name: "{{ service_name }}.service"
       state: stopped
       enabled: no
       scope: system
@@ -24,13 +24,25 @@
       state: absent
 
   - name: Reload systemd and forget the legacy unit
-    shell: "systemctl daemon-reload && (systemctl reset-failed {{ container_friendly_name }}.service || true)"
-
-  - name: Remove the legacy podman-run container
-    shell: "{{ podman_path }} rm --force --ignore {{ container_friendly_name }}"
-    args:
-      chdir: /
-    become_user: "{{ container_user }}"
+    shell: "systemctl daemon-reload && (systemctl reset-failed {{ service_name }}.service || true)"
   become: yes
   become_user: root
   when: syslog_legacy_system_unit.stat.exists
+
+# Checked on every run, so a container left by an interrupted cleanup is still
+# removed. Quadlet's own container can have the same name; it carries the
+# PODMAN_SYSTEMD_UNIT label and is left alone.
+- name: Remove a leftover legacy podman-run container {{ service_name }}
+  shell: |
+    {{ podman_path }} container exists {{ service_name }} || exit 0
+    unit=$({{ podman_path }} inspect {{ service_name }} --format '{{ '{{' }}index .Config.Labels "PODMAN_SYSTEMD_UNIT"{{ '}}' }}')
+    [ -n "$unit" ] && exit 0
+    {{ podman_path }} rm --force {{ service_name }} && echo removed
+  args:
+    chdir: /
+    executable: /bin/bash
+  register: syslog_legacy_container
+  changed_when: "'removed' in syslog_legacy_container.stdout"
+  become: yes
+  become_user: "{{ container_user }}"
+  when: not ansible_check_mode

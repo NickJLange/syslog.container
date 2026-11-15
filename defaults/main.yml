@@ -7,4 +7,6 @@ service_name: "syslog-collector"
 
 # Rendered configs; a change restarts the service (generic post)
 container_restart_watch:
-  - "{{ container_conf_dir }}/syslog-ng.conf"
+  # Spelled out: in the generic post, container_conf_dir resolves to the generic
+  # role's default (data/), not this role's etc/.
+  - "{{ container_prefix }}/etc/syslog-ng.conf"

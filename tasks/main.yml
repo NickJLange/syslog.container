@@ -34,7 +34,7 @@
   shell: |
     export XDG_RUNTIME_DIR=/run/user/$(id -u)
     # Only when missing: refreshing the image (and restarting on a new image ID)
-    # is the generic post's job.
+    # is done by the generic post.
     {{ podman_path }} image exists {{ image_name | quote }} ||
       {{ podman_path }} pull --quiet {{ image_name | quote }}
   args:

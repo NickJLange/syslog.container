@@ -11,6 +11,9 @@
       - quadlet_path is defined
       - container_env_file is defined
 
+- import_tasks: retire_legacy.yml
+  tags: [service_install_binary]
+
 - import_tasks: install.yml
   tags: [service_install_binary]
 

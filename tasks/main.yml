@@ -30,10 +30,13 @@
 # Retire the legacy collector only once the replacement is ready: inputs and
 # Quadlet unit are in place and the image is local. A failed pull leaves the
 # old collector running.
-- name: Pull {{ image_name }} before retiring the legacy collector
+- name: Make sure {{ image_name }} is local before retiring the legacy collector
   shell: |
     export XDG_RUNTIME_DIR=/run/user/$(id -u)
-    {{ podman_path }} pull --quiet {{ image_name | quote }}
+    # Only when missing: refreshing the image (and restarting on a new image ID)
+    # is the generic post's job.
+    {{ podman_path }} image exists {{ image_name | quote }} ||
+      {{ podman_path }} pull --quiet {{ image_name | quote }}
   args:
     chdir: /
     executable: /bin/bash

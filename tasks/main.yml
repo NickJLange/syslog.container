@@ -12,9 +12,6 @@
       - container_env_file is defined
       - podman_path is defined
 
-- import_tasks: retire_legacy.yml
-  tags: [service_install_binary]
-
 - import_tasks: install.yml
   tags: [service_install_binary]
 
@@ -28,4 +25,23 @@
     mode: 0644
     owner: "{{ container_user }}"
     group: "{{ container_group }}"
+  tags: [service_install_binary]
+
+# Retire the legacy collector only once the replacement is ready: inputs and
+# Quadlet unit are in place and the image is local. A failed pull leaves the
+# old collector running.
+- name: Pull {{ image_name }} before retiring the legacy collector
+  shell: |
+    export XDG_RUNTIME_DIR=/run/user/$(id -u)
+    {{ podman_path }} pull --quiet {{ image_name | quote }}
+  args:
+    chdir: /
+    executable: /bin/bash
+  changed_when: false
+  become: yes
+  become_user: "{{ container_user }}"
+  when: not ansible_check_mode
+  tags: [service_install_binary]
+
+- import_tasks: retire_legacy.yml
   tags: [service_install_binary]
